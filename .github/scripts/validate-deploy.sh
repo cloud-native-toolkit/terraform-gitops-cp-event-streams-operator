@@ -2,14 +2,16 @@
 
 GIT_REPO=$(cat git_repo)
 GIT_TOKEN=$(cat git_token)
+BIN_DIR=$(cat .bin_dir)
 
 export KUBECONFIG=$(cat .kubeconfig)
-NAMESPACE=$(cat .namespace)
-COMPONENT_NAME=$(jq -r '.name // "my-module"' gitops-output.json)
-BRANCH=$(jq -r '.branch // "main"' gitops-output.json)
-SERVER_NAME=$(jq -r '.server_name // "default"' gitops-output.json)
-LAYER=$(jq -r '.layer_dir // "2-services"' gitops-output.json)
-TYPE=$(jq -r '.type // "base"' gitops-output.json)
+NAMESPACE="openshift-operators"
+BRANCH="main"
+SERVER_NAME="default"
+TYPE="base"
+LAYER="2-services"
+
+COMPONENT_NAME="ibm-eventstreams"
 
 mkdir -p .testrepo
 
@@ -19,21 +21,21 @@ cd .testrepo || exit 1
 
 find . -name "*"
 
-if [[ ! -f "argocd/${LAYER}/cluster/${SERVER_NAME}/${TYPE}/${NAMESPACE}-${COMPONENT_NAME}.yaml" ]]; then
-  echo "ArgoCD config missing - argocd/${LAYER}/cluster/${SERVER_NAME}/${TYPE}/${NAMESPACE}-${COMPONENT_NAME}.yaml"
+if [[ ! -f "./argocd/2-services/cluster/default/operators/${NAMESPACE}-ibm-eventstreams-operator.yaml" ]]; then
+  echo "ArgoCD config missing - ./argocd/2-services/cluster/default/operators/${NAMESPACE}-ibm-eventstreams-operator.yaml"
   exit 1
 fi
 
 echo "Printing argocd/${LAYER}/cluster/${SERVER_NAME}/${TYPE}/${NAMESPACE}-${COMPONENT_NAME}.yaml"
-cat "argocd/${LAYER}/cluster/${SERVER_NAME}/${TYPE}/${NAMESPACE}-${COMPONENT_NAME}.yaml"
+cat "./argocd/2-services/cluster/default/operators/${NAMESPACE}-ibm-eventstreams-operator.yaml"
 
-if [[ ! -f "payload/${LAYER}/namespace/${NAMESPACE}/${COMPONENT_NAME}/values.yaml" ]]; then
-  echo "Application values not found - payload/${LAYER}/namespace/${NAMESPACE}/${COMPONENT_NAME}/values.yaml"
+if [[ ! -f "./payload/2-services/namespace/${NAMESPACE}/ibm-eventstreams-operator/values.yaml" ]]; then
+  echo "Application values not found - ./payload/2-services/namespace/${NAMESPACE}/ibm-eventstreams-operator/values.yaml"
   exit 1
 fi
 
-echo "Printing payload/${LAYER}/namespace/${NAMESPACE}/${COMPONENT_NAME}/values.yaml"
-cat "payload/${LAYER}/namespace/${NAMESPACE}/${COMPONENT_NAME}/values.yaml"
+echo "Printing ./payload/2-services/namespace/${NAMESPACE}/ibm-eventstreams-operator/values.yaml"
+cat "./payload/2-services/namespace/${NAMESPACE}/ibm-eventstreams-operator/values.yaml"
 
 count=0
 until kubectl get namespace "${NAMESPACE}" 1> /dev/null 2> /dev/null || [[ $count -eq 20 ]]; do
@@ -50,21 +52,36 @@ else
   sleep 30
 fi
 
-DEPLOYMENT="${COMPONENT_NAME}-${BRANCH}"
+
+SUBSCRIPTION="subscription/${COMPONENT_NAME}"
 count=0
-until kubectl get deployment "${DEPLOYMENT}" -n "${NAMESPACE}" || [[ $count -eq 20 ]]; do
-  echo "Waiting for deployment/${DEPLOYMENT} in ${NAMESPACE}"
+until kubectl get "${SUBSCRIPTION}" -n "${NAMESPACE}" || [[ $count -eq 20 ]]; do
+  echo "Waiting for ${SUBSCRIPTION} in ${NAMESPACE}"
   count=$((count + 1))
   sleep 15
 done
 
 if [[ $count -eq 20 ]]; then
-  echo "Timed out waiting for deployment/${DEPLOYMENT} in ${NAMESPACE}"
-  kubectl get all -n "${NAMESPACE}"
+  echo "Timed out waiting for ${SUBSCRIPTION} in ${NAMESPACE}"
+  kubectl get subscription -n "${NAMESPACE}"
   exit 1
 fi
 
-kubectl rollout status "deployment/${DEPLOYMENT}" -n "${NAMESPACE}" || exit 1
+count=0
+until kubectl get csv -n "${NAMESPACE}" -o json | "${BIN_DIR}/jq" -r '.items[] | .metadata.name' | grep -q ibm-eventstreams || [[ $count -eq 20 ]]; do
+  echo "Waiting for ibm-eventstreams csv in ${NAMESPACE}"
+  count=$((count + 1))
+  sleep 15
+done
+
+if [[ $count -eq 20 ]]; then
+  echo "Timed out waiting for ibm-eventstreams csv in ${NAMESPACE}"
+  kubectl get csv -n "${NAMESPACE}"
+  exit 1
+fi
+
+CSV=$(kubectl get csv -n "${NAMESPACE}" -o json | "${BIN_DIR}/jq" -r '.items[] | .metadata.name' | grep ibm-eventstreams)
+echo "Found csv ${CSV} in ${NAMESPACE}"
 
 cd ..
 rm -rf .testrepo

@@ -1,23 +1,6 @@
-# Starter kit for a Terraform GitOps module
+# IBM Cloud Pak Event Streams module
 
-This is a Starter kit to help with the creation of Terraform modules. The basic structure of a Terraform module is fairly
-simple and consists of the following basic values:
-
-- README.md - provides a description of the module
-- main.tf - defines the logic for the module
-- variables.tf (optional) - defines the input variables for the module
-- outputs.tf (optional) - defines the values that are output from the module
-
-Beyond those files, any other content can be added and organized however you see fit. For example, you can add a `scripts/` directory
-that contains shell scripts executed by a `local-exec` `null_resource` in the terraform module. The contents will depend on what your
-module does and how it does it.
-
-## Instructions for creating a new module
-
-1. Update the title and description in the README to match the module you are creating
-2. Fill out the remaining sections in the README template as appropriate
-3. Implement your logic in the in the main.tf, variables.tf, and outputs.tf
-4. Use releases/tags to manage release versions of your module
+Module to populate a gitops repository with the EventStreams operator from IBM Cloud Pak for Integration.
 
 ## Software dependencies
 
@@ -25,58 +8,34 @@ The module depends on the following software components:
 
 ### Command-line tools
 
-- terraform - v12
-- kubectl
+- terraform - v15
 
 ### Terraform providers
 
-- IBM Cloud provider >= 1.5.3
-- Helm provider >= 1.1.1 (provided by Terraform)
+None
 
 ## Module dependencies
 
 This module makes use of the output from other modules:
 
 - GitOps - github.com/cloud-native-toolkit/terraform-tools-gitops.git
-- Namespace - github.com/cloud-native-toolkit/terraform-gitops-namespace.git
-- etc
+- Catalogs - github.com/cloud-native-toolkit/terraform-gitops-cp-catalogs.git
+- Plaform Navigator - github.com/cloud-native-toolkit/terraform-gitops-cp-platform-navigator.git
 
 ## Example usage
 
 ```hcl-terraform
-module "dev_tools_argocd" {
-  source = "github.com/cloud-native-toolkit/terraform-tools-argocd.git"
+module "eventstreams" {
+  source = "github.com/cloud-native-toolkit/terraform-gitops-cp-event-streams.git"
 
-  cluster_config_file = module.dev_cluster.config_file_path
-  cluster_type        = module.dev_cluster.type
-  app_namespace       = module.dev_cluster_namespaces.tools_namespace_name
-  ingress_subdomain   = module.dev_cluster.ingress_hostname
-  olm_namespace       = module.dev_software_olm.olm_namespace
-  operator_namespace  = module.dev_software_olm.target_namespace
-  name                = "argocd"
+  gitops_config = module.gitops.gitops_config
+  git_credentials = module.gitops.git_credentials
+  server_name = module.gitops.server_name
+  kubeseal_cert = module.argocd-bootstrap.sealed_secrets_cert
+  catalog = module.cp_catalogs.catalog_ibmoperators
+  platform_navigator_name = module.cp_platform_navigator.name
 }
 ```
-
-## Anatomy of the GitOps module repository
-
-An automation modules is created from a template repository that includes a skeleton of the module logic and the automation framework to validate and release the module.
-
-### Module logic
-
-The module follows the naming convention of terraform modules:
-
-- **main.tf** - The logic for the module. The structure of the GitOps logic in the **main.tf** file is largely the same from GitOps module to the next with the difference being the yaml provided to populate the GitOps repo
-- **variables.tf** - The input variables for the module. A number of modules are defined by default in the module and should remain. Additional variables can be added as needed by the module.
-- **outputs.tf** - The output variables for the module. These are rarely used for GitOps modules but can provide values for downstream modules.
-- **version.tf** - The minimum required terraform version. Currently, this is defaulted to `v0.15`. If any terraform providers are required by the module they would be added here as well, although this is highly unlikely for GitOps modules.
-- **module.yaml** - The metadata descriptor for the module. Each of the automation modules provides a metadata file that describes the name, description, and external dependencies of the module. Metadata for the input variables can also be provided. When a release of the module is created, an automated workflow will supplement the contents of this file with the input and output variables defined in `variables.tf` and `outputs.tf` and publish the result to `index.yaml` on the `gh-pages` branch.
-- **scripts/create-yaml.sh** - Script to set up the payload yaml for the GitOps repository in a temporary directory from which the repository will be populated. This script should be customized for the requirements of the module.
-- **README.md** - The documentation for the module. An initial readme is provided with instructions at the top and a template for the module documentation at the bottom.
-
-### Module automation
-
-The automation modules rely heavily on [GitHub Actions](https://docs.github.com/en/actions/learn-github-actions/understanding-github-actions) automatically validate changes to the module and release new versions. The GitHub Action workflows are found in **.github/workflows**. There are three workflows provided by default:
-
 #### Verify and release module (verify.yaml)
 
 This workflow runs for pull requests against the `main` branch and when changes are pushed to the `main` branch.
@@ -120,66 +79,6 @@ on:
 ```
 
 When a release is created, a repository dispatch is sent out to the repositories listed in the `strategy.matrix.repo` variable. By default, the `automation-modules` and `ibm-garage-iteration-zero` repositories are notified. When those modules receive the notification, an automation workflow is triggered on their end to deal with the newly available module version.
-
-### Module metadata
-
-The module metadata adds extra descriptive information about the module that is used to build out the module catalog.
-
-```yaml
-name: ""
-type: gitops
-description: ""
-tags:
-  - tools
-  - gitops
-versions:
-  - platforms:
-      - kubernetes
-      - ocp3
-      - ocp4
-    dependencies:
-      - id: gitops
-        refs:
-          - source: github.com/cloud-native-toolkit/terraform-tools-gitops.git
-            version: ">= 1.1.0"
-      - id: namespace
-        refs:
-          - source: github.com/cloud-native-toolkit/terraform-gitops-namespace.git
-            version: ">= 1.0.0"
-    variables:
-      - name: gitops_config
-        moduleRef:
-          id: gitops
-          output: gitops_config
-      - name: git_credentials
-        moduleRef:
-          id: gitops
-          output: git_credentials
-      - name: server_name
-        moduleRef:
-          id: gitops
-          output: server_name
-      - name: namespace
-        moduleRef:
-          id: namespace
-          output: name
-      - name: kubeseal_cert
-        moduleRef:
-          id: gitops
-          output: sealed_secrets_cert
-```
-
-- **name** - The `name` field is required and must be unique among the other modules. This value is used to reference the module in the Bill of Materials.
-- **description** - The `description` should provide a summary of what the module does.
-- **tags** - The `tags` are used to provide searchable keywords related to the module.
-- **versions** - When the final module metadata is generated, the `versions` array will contain a different entry for each version with a snapshot of the inputs and outputs for that version. In the `module.yaml` file this array should contain a single entry that describes the current version's dependencies and inputs.
-- **versions[*].platforms** - The target cluster types and versions supported by the module
-- **versions[*].dependencies** - The external modules upon which this module depends. These dependencies are used to offload logic for which this module should not be responsible and retrieve the necessary values from the outputs of these dependencies. Additiaonlly, this allows resources to be shared between modules by referencing to the same external dependency instance.
-- **versions[*].variables** - Additional metadata provided for the input variables. When the metadata is generated for the release, the information for all the input variables is read from `variables.tf` and is supplemented with the information provided here. If there is no additional information to add to a variable it can be excluded from `module.yaml`. Examples of variable metadata that can be added: mapping the variable to the output of a dependency or setting the scope of the variable to `global`, `ignore`, or `module` (the default).
-
-**Note:** For most all GitOps modules, the initial dependencies and variable mappings should be preserved. Additional dependencies and variable definitions can be added as needed.
-
-**Note:** As a design point, the gitops module should ideally not have a direct dependency on the cluster and should instead depend (exclusively) on the gitops repository. That way, the cluster itself might be inaccessible by the automation process but the software can still be installed in the cluster so long as the gitops repository is accessible.
 
 ### Module test logic
 
