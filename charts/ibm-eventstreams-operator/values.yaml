@@ -1,5 +1,5 @@
 global: {}
-ibm-mq-operator:
+ibm-eventstreams-operator:
   subscriptions:
     ibmmq:
       name: ibm-eventstreams
