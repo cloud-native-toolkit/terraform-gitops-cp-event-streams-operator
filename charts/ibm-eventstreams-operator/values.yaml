@@ -1,7 +1,7 @@
 global: {}
 ibm-eventstreams-operator:
   subscriptions:
-    ibmmq:
+    ibmeventstreams:
       name: ibm-eventstreams
       subscription:
         channel: v2.2-eus
