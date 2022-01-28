@@ -1,7 +1,7 @@
 
 resource null_resource write_outputs {
   provisioner "local-exec" {
-    //  command = "echo \"$${OUTPUT}\" > eventstreams-output.json"
+    command = "echo \"$${OUTPUT}\" > eventstreams-output.json"
 
     environment = {
       OUTPUT = jsonencode({
