@@ -6,6 +6,6 @@ module "eventstreams_module" {
   server_name     = module.gitops.server_name
   catalog         = module.cp_catalogs.catalog_ibmoperators
   //  channel         = module.cp4i-dependencies.eventstreams.channel
-  channel = "v2.3"
+  channel = "v2.5.0"
   //  kubeseal_cert   = module.gitops.sealed_secrets_cert
 }
