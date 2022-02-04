@@ -4,7 +4,7 @@ ibm-eventstreams-operator:
     ibmeventstreams:
       name: ibm-eventstreams
       subscription:
-        channel: v2.5
+        channel: v2.2-eus
         installPlanApproval: Automatic
         name: ibm-eventstreams
         source: ibm-operator-catalog
