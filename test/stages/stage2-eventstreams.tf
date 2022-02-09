@@ -5,7 +5,7 @@ module "eventstreams_module" {
   git_credentials = module.gitops.git_credentials
   server_name     = module.gitops.server_name
   catalog         = module.cp_catalogs.catalog_ibmoperators
-  // update the module first  channel         = module.cp4i-dependencies.eventstreams.channel
+  // channel        = module.cp4i-dependencies.eventstreams.channel
   channel = "v2.5"
   //  kubeseal_cert   = module.gitops.sealed_secrets_cert
 }
