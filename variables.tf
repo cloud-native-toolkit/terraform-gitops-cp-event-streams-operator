@@ -90,5 +90,5 @@ variable "catalog_namespace" {
 variable "channel" {
   type        = string
   description = "The channel that should be used to deploy the operator"
-  default     = "v2.2-eus"
+  default     = "v2.5"
 }
