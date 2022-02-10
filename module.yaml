@@ -1,25 +1,29 @@
-name: gitops-cp-event-streams
-type: gitops
-description: >-
-  Module to populate a gitops repo with the resources to provision
-  cp-event-streams
+name: gitops-cp-eventstreams
+type: terraform
+description: Module to populate a gitops repository with the resources to provision the Event Streams operator from IBM Cloud Pak for Integration.
 tags:
   - tools
   - gitops
+  - ibm
+  - cloud pak
+  - operator
+  - eventstreams
 versions:
   - platforms:
-      - kubernetes
-      - ocp3
       - ocp4
     dependencies:
       - id: gitops
         refs:
           - source: github.com/cloud-native-toolkit/terraform-tools-gitops.git
-            version: '>= 1.1.0'
-      - id: namespace
+            version: ">= 1.1.0"
+      - id: catalogs
         refs:
-          - source: github.com/cloud-native-toolkit/terraform-gitops-namespace.git
-            version: '>= 1.0.0'
+          - source: github.com/cloud-native-toolkit/terraform-gitops-cp-catalogs.git
+            version: ">= 1.0.0"
+      - id: dep-manager
+        refs:
+          - source: github.com/cloud-native-toolkit/terraform-cp4i-dependency-management.git
+            version: ">= 1.0.0"
     variables:
       - name: gitops_config
         moduleRef:
@@ -33,11 +37,11 @@ versions:
         moduleRef:
           id: gitops
           output: server_name
-      - name: namespace
+      - name: catalog
         moduleRef:
-          id: namespace
-          output: name
-      - name: kubeseal_cert
+          id: catalogs
+          output: catalog_ibmoperators
+      - name: channel
         moduleRef:
-          id: gitops
-          output: sealed_secrets_cert
+          id: dep-manager
+          output: eventstreams.channel
