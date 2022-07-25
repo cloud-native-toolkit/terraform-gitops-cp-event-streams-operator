@@ -1,4 +1,4 @@
-name: gitops-cp-eventstreams-operator
+name: gitops-cp-es-operator
 type: terraform
 description: Module to populate a gitops repository with the resources to provision the Event Streams operator from IBM Cloud Pak for Integration.
 tags:
